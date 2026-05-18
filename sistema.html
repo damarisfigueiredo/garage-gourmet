@@ -40,10 +40,13 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 
 /* HEADER */
 .sticky-top {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 200;
 }
+body { padding-top: 108px; }
 .header {
   background: #000;
   border-bottom: 1px solid var(--border);
@@ -1502,31 +1505,33 @@ function renderDashboard() {
       .reduce(function(s,p){ return s+p.valor; },0);
   });
   var canvas = document.getElementById('chart-horas');
-  if (chartHoras) { chartHoras.destroy(); }
-  chartHoras = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels: horas.map(function(h){ return h+'h'; }),
-      datasets: [{
-        label: 'Vendas',
-        data: vals,
-        backgroundColor: function(ctx) {
-          return vals[ctx.dataIndex] > 0 ? '#e53935' : 'rgba(229,57,53,0.15)';
+  try {
+    if (chartHoras) { chartHoras.destroy(); chartHoras = null; }
+    if (typeof Chart !== 'undefined') {
+      chartHoras = new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: horas.map(function(h){ return h+'h'; }),
+          datasets: [{
+            label: 'Vendas',
+            data: vals,
+            backgroundColor: vals.map(function(v){ return v > 0 ? '#e53935' : 'rgba(229,57,53,0.15)'; }),
+            borderRadius: 4,
+            borderSkipped: false
+          }]
         },
-        borderRadius: 4,
-        borderSkipped: false
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: {display:false} },
-      scales: {
-        x: { grid:{display:false}, ticks:{color:'#444',font:{size:9}} },
-        y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#444',font:{size:9},callback:function(v){ return v?'R$'+Math.round(v):''; }}, beginAtZero:true }
-      }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: {display:false} },
+          scales: {
+            x: { grid:{display:false}, ticks:{color:'#444',font:{size:9}} },
+            y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{color:'#444',font:{size:9},callback:function(v){ return v?'R$'+Math.round(v):''; }}, beginAtZero:true }
+          }
+        }
+      });
     }
-  });
+  } catch(e) {}
 }
 
 // ─── ZERAR DIA ──────────────────────────────────────────────────────────
