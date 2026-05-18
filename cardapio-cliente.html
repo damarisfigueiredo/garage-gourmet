@@ -264,6 +264,25 @@ textarea { resize: none; min-height: 72px; }
   letter-spacing: 0.04em;
 }
 
+/* PAYMENT OPTIONS */
+.pay-opts { display: flex; gap: 8px; margin-top: 6px; }
+.pay-opt {
+  flex: 1;
+  padding: 10px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border2);
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+.pay-opt.active { border-color: var(--red); background: rgba(229,57,53,0.12); color: var(--text); }
+.troco-wrap { margin-top: 8px; display: none; }
+.troco-wrap.show { display: block; }
+
 /* EMPTY */
 .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
 .empty-state p { margin-top: 8px; }
@@ -321,6 +340,19 @@ textarea { resize: none; min-height: 72px; }
       <input type="text" id="cliente-end" placeholder="Ex: Rua das Flores, 123 — Apto 2">
     </div>
     <div class="form-row" style="margin-top:0">
+      <label class="form-label">Forma de pagamento</label>
+      <div class="pay-opts">
+        <button class="pay-opt" id="pay-dinheiro" onclick="selecionarPag('dinheiro')">💵 Dinheiro</button>
+        <button class="pay-opt" id="pay-cartao"   onclick="selecionarPag('cartao')">💳 Cartão</button>
+        <button class="pay-opt" id="pay-pix"      onclick="selecionarPag('pix')">⚡ Pix</button>
+      </div>
+      <div class="troco-wrap" id="troco-wrap">
+        <label class="form-label" style="margin-top:8px">Troco para quanto?</label>
+        <input type="number" id="cliente-troco" placeholder="Ex: 50,00" min="0" step="0.01">
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-top:0">
       <label class="form-label">Observações (opcional)</label>
       <textarea id="cliente-obs" placeholder="Ex: sem cebola, molho à parte…"></textarea>
     </div>
@@ -344,6 +376,7 @@ textarea { resize: none; min-height: 72px; }
 var KEY = 'gg_v2';
 var carrinho = [];
 var catAtiva = 'Todos';
+var pagSelecionado = '';
 
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -484,15 +517,32 @@ function renderPainel() {
   document.getElementById('panel-total').textContent = fmt(totalCarrinho());
 }
 
+// ─── PAGAMENTO ──────────────────────────────────────────────────────────
+function selecionarPag(tipo) {
+  pagSelecionado = tipo;
+  ['dinheiro','cartao','pix'].forEach(function(t){
+    document.getElementById('pay-'+t).classList.toggle('active', t===tipo);
+  });
+  var trocoWrap = document.getElementById('troco-wrap');
+  trocoWrap.classList.toggle('show', tipo==='dinheiro');
+  if (tipo !== 'dinheiro') document.getElementById('cliente-troco').value = '';
+}
+
 // ─── ENVIAR PEDIDO ───────────────────────────────────────────────────────
 function enviarPedido() {
   if (!carrinho.length) return;
-  var nome = document.getElementById('cliente-nome').value.trim();
-  var end  = document.getElementById('cliente-end').value.trim();
-  var obs  = document.getElementById('cliente-obs').value.trim();
+  var nome  = document.getElementById('cliente-nome').value.trim();
+  var end   = document.getElementById('cliente-end').value.trim();
+  var obs   = document.getElementById('cliente-obs').value.trim();
+  var troco = document.getElementById('cliente-troco').value.trim();
   if (!nome) {
     document.getElementById('cliente-nome').focus();
     document.getElementById('cliente-nome').style.borderColor = 'var(--red)';
+    return;
+  }
+  if (!pagSelecionado) {
+    document.querySelector('.pay-opts').style.outline = '1px solid var(--red)';
+    document.querySelector('.pay-opts').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
 
@@ -505,7 +555,8 @@ function enviarPedido() {
     itens:  carrinho.map(function(i){ return {nome:i.nome, preco:i.preco, qtd:i.qtd}; }),
     valor:  totalCarrinho(),
     mesa:   nome,
-    pag:    'pendente',
+    pag:    pagSelecionado,
+    troco:  pagSelecionado==='dinheiro' && troco ? parseFloat(troco) : 0,
     obs:    obs,
     hora:   new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
     status: 'novo',
@@ -535,6 +586,8 @@ function enviarPedido() {
     });
     linhas.push('');
     linhas.push('*Total: ' + fmt(totalCarrinho()) + '*');
+    var pagLabel = {dinheiro:'💵 Dinheiro',cartao:'💳 Cartão',pix:'⚡ Pix'}[pagSelecionado] || '';
+    if (pagLabel) linhas.push(pagLabel + (pagSelecionado==='dinheiro'&&troco?' — troco para R$ '+troco:''));
     if (end) linhas.push('📍 ' + end);
     if (obs) linhas.push('📝 ' + obs);
     window.open('https://wa.me/55' + wpp + '?text=' + encodeURIComponent(linhas.join('\n')), '_blank');
@@ -547,9 +600,14 @@ function enviarPedido() {
   document.getElementById('success-screen').classList.add('show');
 
   carrinho = [];
-  document.getElementById('cliente-nome').value = '';
-  document.getElementById('cliente-end').value  = '';
-  document.getElementById('cliente-obs').value  = '';
+  pagSelecionado = '';
+  document.getElementById('cliente-nome').value  = '';
+  document.getElementById('cliente-end').value   = '';
+  document.getElementById('cliente-obs').value   = '';
+  document.getElementById('cliente-troco').value = '';
+  ['dinheiro','cartao','pix'].forEach(function(t){ document.getElementById('pay-'+t).classList.remove('active'); });
+  document.getElementById('troco-wrap').classList.remove('show');
+  document.querySelector('.pay-opts').style.outline = '';
 }
 
 function novoPedido() {
