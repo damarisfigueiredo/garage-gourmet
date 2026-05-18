@@ -87,7 +87,8 @@ body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-ser
 }
 .menu-card:active { transform: scale(0.97); }
 .menu-card.in-cart { border-color: var(--red); background: var(--bg3); }
-.menu-card-img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 8px; margin-bottom: 8px; display: block; }
+.menu-card-img-wrap { width: 100%; aspect-ratio: 1; background: #f5a623; border-radius: 10px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.menu-card-img { width: 90%; height: 90%; object-fit: contain; display: block; }
 .menu-card-name { font-size: 14px; font-weight: 600; line-height: 1.35; margin-bottom: 6px; }
 .menu-card-price { font-size: 15px; font-weight: 700; color: var(--green); }
 .menu-card-qty {
@@ -459,7 +460,7 @@ function render() {
       var qtyBadge = citem ? '<div class="menu-card-qty">'+citem.qtd+'</div>' : '';
       html += '<div class="menu-card'+(citem?' in-cart':'')+'" onclick="addItem(\''+esc(item.id)+'\',\''+esc(item.nome)+'\','+item.preco+')">' +
         qtyBadge +
-        (fotoItem(item)?'<img class="menu-card-img" src="'+fotoItem(item)+'" alt="'+esc(item.nome)+'" loading="lazy">':'') +
+        (fotoItem(item)?'<div class="menu-card-img-wrap"><img class="menu-card-img" src="'+fotoItem(item)+'" alt="'+esc(item.nome)+'" loading="lazy"></div>':'') +
         '<div class="menu-card-name">'+esc(item.nome)+'</div>' +
         (item.descricao?'<div style="font-size:11px;color:#888;margin-bottom:6px;line-height:1.4">'+esc(item.descricao)+'</div>':'') +
         '<div class="menu-card-price">'+fmt(item.preco)+'</div>' +
