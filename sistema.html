@@ -1061,13 +1061,21 @@ var catCardapioAtiva = 'Todos';
 var catPedidosAtiva  = 'Todos';
 var catCardapioPillLast = 'Todos';
 
+var BURGER_FOTOS = {
+  'Clássico':       'burger-classico.png',
+  'Salada Burguer': 'burger-salada.png',
+  'Bacon Burguer':  'burger-bacon.png',
+  'Especial Garage':'burger-especial.png',
+  'Garage Duplo':   'burger-duplo.png',
+  'Garage Sertanejo':'burger-sertanejo.png'
+};
 var DEFAULTS_CARDAPIO = [
-  {id:uid(),nome:'Clássico',descricao:'Pão brioche, blend bovino 150g, queijo prato ou cheddar e molho especial da casa.',preco:20,categoria:'Burgers',disponivel:true},
-  {id:uid(),nome:'Salada Burguer',descricao:'Pão brioche, blend bovino 150g, queijo prato ou cheddar, alface, tomate, picles e molho especial da casa.',preco:23,categoria:'Burgers',disponivel:true},
-  {id:uid(),nome:'Bacon Burguer',descricao:'Pão brioche, blend bovino 150g, queijo prato ou cheddar, bacon crocante, cheddar, cebola caramelizada e molho especial da casa.',preco:27,categoria:'Burgers',disponivel:true},
-  {id:uid(),nome:'Especial Garage',descricao:'Pão brioche, blend bovino 150g, queijo prato, bacon crocante, banana da terra, cebola caramelizada, creme de cheddar e molho especial da casa.',preco:32,categoria:'Burgers',disponivel:true},
-  {id:uid(),nome:'Garage Duplo',descricao:'Pão brioche, duplo blend bovino 150g, duplo queijo cheddar, duplo bacon crocante e molho especial da casa.',preco:35,categoria:'Burgers',disponivel:true},
-  {id:uid(),nome:'Garage Sertanejo',descricao:'Pão brioche, blend bovino 150g, queijo prato, banana da terra, carne seca desfiada, catupiry e molho especial da casa.',preco:33,categoria:'Burgers',disponivel:true},
+  {id:uid(),nome:'Clássico',descricao:'Pão brioche, blend bovino 150g, queijo prato ou cheddar e molho especial da casa.',preco:20,categoria:'Burgers',foto:'burger-classico.png',disponivel:true},
+  {id:uid(),nome:'Salada Burguer',descricao:'Pão brioche, blend bovino 150g, queijo prato ou cheddar, alface, tomate, picles e molho especial da casa.',preco:23,categoria:'Burgers',foto:'burger-salada.png',disponivel:true},
+  {id:uid(),nome:'Bacon Burguer',descricao:'Pão brioche, blend bovino 150g, queijo prato ou cheddar, bacon crocante, cheddar, cebola caramelizada e molho especial da casa.',preco:27,categoria:'Burgers',foto:'burger-bacon.png',disponivel:true},
+  {id:uid(),nome:'Especial Garage',descricao:'Pão brioche, blend bovino 150g, queijo prato, bacon crocante, banana da terra, cebola caramelizada, creme de cheddar e molho especial da casa.',preco:32,categoria:'Burgers',foto:'burger-especial.png',disponivel:true},
+  {id:uid(),nome:'Garage Duplo',descricao:'Pão brioche, duplo blend bovino 150g, duplo queijo cheddar, duplo bacon crocante e molho especial da casa.',preco:35,categoria:'Burgers',foto:'burger-duplo.png',disponivel:true},
+  {id:uid(),nome:'Garage Sertanejo',descricao:'Pão brioche, blend bovino 150g, queijo prato, banana da terra, carne seca desfiada, catupiry e molho especial da casa.',preco:33,categoria:'Burgers',foto:'burger-sertanejo.png',disponivel:true},
   {id:uid(),nome:'Coca-Cola ou Guaraná 2L',descricao:'',preco:15,categoria:'Bebidas',disponivel:true},
   {id:uid(),nome:'Coca-Cola Zero 2L',descricao:'',preco:16,categoria:'Bebidas',disponivel:true},
   {id:uid(),nome:'Coca-Cola ou Guaraná 1L',descricao:'',preco:10,categoria:'Bebidas',disponivel:true},
@@ -1097,6 +1105,10 @@ function carregar() {
       estado.pedidoNum = d.pedidoNum || 1;
       var temAntigo = estado.cardapio.some(function(i){ return i.categoria === 'Lanches' || i.categoria === 'Acompanhamentos' || i.categoria === 'Sobremesas'; });
       if (!estado.cardapio.length || temAntigo) { estado.cardapio = DEFAULTS_CARDAPIO; salvar(); }
+      // adiciona foto nos burgers que ainda não têm
+      var foiAtualizado = false;
+      estado.cardapio.forEach(function(i){ if (!i.foto && BURGER_FOTOS[i.nome]) { i.foto = BURGER_FOTOS[i.nome]; foiAtualizado = true; } });
+      if (foiAtualizado) salvar();
     } else {
       estado.cardapio = DEFAULTS_CARDAPIO;
       salvar();
