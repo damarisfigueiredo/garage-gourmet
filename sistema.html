@@ -1059,7 +1059,7 @@ function carregar() {
       estado.artes     = d.artes     || [];
       estado.pedidoNum = d.pedidoNum || 1;
       var temAntigo = estado.cardapio.some(function(i){ return i.categoria === 'Lanches' || i.categoria === 'Acompanhamentos' || i.categoria === 'Sobremesas'; });
-      if (temAntigo) { estado.cardapio = DEFAULTS_CARDAPIO; salvar(); }
+      if (!estado.cardapio.length || temAntigo) { estado.cardapio = DEFAULTS_CARDAPIO; salvar(); }
     } else {
       estado.cardapio = DEFAULTS_CARDAPIO;
       salvar();
