@@ -604,6 +604,46 @@ textarea { resize: none; min-height: 72px; }
 .subtab.active { color: var(--red); border-bottom-color: var(--red); }
 .subtab-view { display: none; }
 .subtab-view.active { display: block; }
+
+/* HISTÓRICO */
+.hist-pills { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.hist-pill {
+  padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border2);
+  font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text2);
+  background: transparent;
+}
+.hist-pill.active { background: var(--red); color: #fff; border-color: var(--red); }
+.hist-summary {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;
+}
+.hist-card {
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.hist-card-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+.hist-card-value { font-size: 20px; font-weight: 700; color: var(--text); }
+.hist-card-value.green { color: var(--green); }
+.hist-card-value.red { color: var(--red); }
+.hist-day {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  margin-bottom: 8px; overflow: hidden;
+}
+.hist-day-head {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer;
+}
+.hist-day-data { flex: 1; }
+.hist-day-nome { font-size: 13px; font-weight: 700; color: var(--text); }
+.hist-day-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.hist-day-fat { font-size: 15px; font-weight: 700; color: var(--gold); white-space: nowrap; }
+.hist-day-body {
+  padding: 0 14px 12px; border-top: 1px solid var(--border); display: none;
+}
+.hist-day-body.open { display: block; }
+.hist-day-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.hist-day-row:last-child { border-bottom: none; }
+.hist-top-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; font-size: 12px; color: var(--text2); border-bottom: 1px solid var(--border); }
+.hist-top-item:last-child { border: none; }
+.hist-empty { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13px; }
 </style>
 </head>
 <body>
@@ -633,6 +673,7 @@ textarea { resize: none; min-height: 72px; }
     <button class="nav-btn" onclick="irPara('estoque',this)">Estoque</button>
     <button class="nav-btn" onclick="irPara('caixa',this)">Caixa</button>
     <button class="nav-btn" onclick="irPara('artes',this)">Artes</button>
+    <button class="nav-btn" onclick="irPara('historico',this)">Histórico</button>
   </div>
 </div>
 
@@ -1110,6 +1151,35 @@ textarea { resize: none; min-height: 72px; }
   <button class="btn btn-ghost" onclick="artesLimpar()" style="margin-top:0">Limpar todas as artes</button>
 </div>
 
+<!-- ===== HISTÓRICO ===== -->
+<div id="view-historico" class="view">
+  <div class="section">
+    <div class="section-head">
+      <span class="section-title">Histórico</span>
+      <span style="font-size:11px;color:var(--muted)" id="hist-periodo-label"></span>
+    </div>
+    <div class="section-body">
+      <!-- Filtros de período -->
+      <div class="hist-pills" id="hist-pills">
+        <button class="hist-pill active" onclick="filtrarHist('semana',this)">Esta semana</button>
+        <button class="hist-pill" onclick="filtrarHist('mes',this)">Este mês</button>
+        <button class="hist-pill" onclick="filtrarHist('tudo',this)">Tudo</button>
+      </div>
+
+      <!-- Resumo do período -->
+      <div class="hist-summary" id="hist-summary"></div>
+
+      <!-- Gráfico -->
+      <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;display:none" id="hist-chart-wrap">
+        <canvas id="hist-chart" height="120"></canvas>
+      </div>
+
+      <!-- Lista de dias -->
+      <div id="hist-lista"></div>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -1162,6 +1232,7 @@ var estado = {
   estoque:   [],
   custos:    [],
   artes:     [],
+  historico: [],
   whatsapp:  '3384413525',
   pedidoNum: 1
 };
@@ -1210,6 +1281,7 @@ function carregar() {
       estado.estoque   = d.estoque   || [];
       estado.custos    = d.custos    || [];
       estado.artes     = d.artes     || [];
+      estado.historico = d.historico || [];
       estado.whatsapp  = d.whatsapp  || estado.whatsapp;
       estado.pedidoNum = d.pedidoNum || 1;
       var temAntigo = estado.cardapio.some(function(i){ return i.categoria === 'Lanches' || i.categoria === 'Acompanhamentos' || i.categoria === 'Sobremesas'; });
@@ -1241,6 +1313,7 @@ function irPara(id, btn) {
   if (id==='estoque')   renderEstoque();
   if (id==='caixa')     renderCaixa();
   if (id==='artes')     { renderArtes(); atualizarSbUI(); }
+  if (id==='historico') renderHistorico();
 }
 
 function irSubtab(id, btn) {
@@ -1841,7 +1914,39 @@ function renderDashboard() {
 
 // ─── ZERAR DIA ──────────────────────────────────────────────────────────
 function confirmarZerarDia() {
-  if (!confirm('Zerar todos os pedidos e lançamentos do dia? Esta ação não pode ser desfeita.')) return;
+  if (!confirm('Fechar o dia? Os dados serão salvos no histórico e os pedidos do dia serão zerados.')) return;
+
+  // Calcular snapshot do dia
+  var fat    = estado.pedidos.reduce(function(s,p){ return s+p.valor; }, 0);
+  var saidas = estado.custos.reduce(function(s,c){ return s+c.valor; }, 0);
+  var hoje   = new Date();
+  var dias   = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+
+  // Top itens vendidos
+  var contagem = {};
+  estado.pedidos.forEach(function(p) {
+    (p.itens||[]).forEach(function(i) {
+      if (!contagem[i.nome]) contagem[i.nome] = { nome: i.nome, qtd: 0, total: 0 };
+      contagem[i.nome].qtd += (i.qtd||1);
+      contagem[i.nome].total += (i.preco||0) * (i.qtd||1);
+    });
+  });
+  var topItens = Object.keys(contagem).map(function(k){ return contagem[k]; })
+    .sort(function(a,b){ return b.qtd - a.qtd; }).slice(0,5);
+
+  var snapshot = {
+    data: hoje.toISOString().slice(0,10),
+    dataFmt: hoje.toLocaleDateString('pt-BR'),
+    diaSemana: dias[hoje.getDay()],
+    faturamento: fat,
+    saidas: saidas,
+    saldo: fat - saidas,
+    numPedidos: estado.pedidos.length,
+    ticketMedio: estado.pedidos.length ? fat / estado.pedidos.length : 0,
+    topItens: topItens
+  };
+
+  estado.historico.push(snapshot);
   estado.pedidos   = [];
   estado.custos    = [];
   estado.pedidoNum = 1;
@@ -1851,7 +1956,125 @@ function confirmarZerarDia() {
   renderPedidos();
   renderCaixa();
   renderCozinha();
-  toast('Dados do dia zerados','warn');
+  toast('Dia fechado e salvo no histórico!', 'ok');
+}
+
+// ─── HISTÓRICO ──────────────────────────────────────────────────────────
+var histFiltro = 'semana';
+
+function filtrarHist(periodo, btn) {
+  histFiltro = periodo;
+  document.querySelectorAll('.hist-pill').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderHistorico();
+}
+
+function renderHistorico() {
+  var hist = (estado.historico || []).slice().reverse(); // mais recente primeiro
+  var agora = new Date();
+  var filtrados = hist.filter(function(d) {
+    if (histFiltro === 'tudo') return true;
+    var dt = new Date(d.data + 'T00:00:00');
+    if (histFiltro === 'semana') {
+      var semAgo = new Date(agora); semAgo.setDate(agora.getDate() - 7);
+      return dt >= semAgo;
+    }
+    if (histFiltro === 'mes') {
+      return dt.getMonth() === agora.getMonth() && dt.getFullYear() === agora.getFullYear();
+    }
+    return true;
+  });
+
+  // Labels
+  var labels = { semana: 'Últimos 7 dias', mes: 'Este mês', tudo: 'Todo o período' };
+  var labelEl = document.getElementById('hist-periodo-label');
+  if (labelEl) labelEl.textContent = labels[histFiltro] || '';
+
+  // Totais
+  var totalFat   = filtrados.reduce(function(s,d){ return s+d.faturamento; }, 0);
+  var totalSaldo = filtrados.reduce(function(s,d){ return s+d.saldo; }, 0);
+  var totalPed   = filtrados.reduce(function(s,d){ return s+d.numPedidos; }, 0);
+  var ticketMed  = totalPed ? totalFat / totalPed : 0;
+
+  // Summary cards
+  var summaryEl = document.getElementById('hist-summary');
+  summaryEl.innerHTML =
+    '<div class="hist-card"><div class="hist-card-label">Faturamento</div><div class="hist-card-value">' + fmtS(totalFat) + '</div></div>' +
+    '<div class="hist-card"><div class="hist-card-label">Saldo</div><div class="hist-card-value ' + (totalSaldo>=0?'green':'red') + '">' + fmtS(totalSaldo) + '</div></div>' +
+    '<div class="hist-card"><div class="hist-card-label">Total Pedidos</div><div class="hist-card-value">' + totalPed + '</div></div>' +
+    '<div class="hist-card"><div class="hist-card-label">Ticket Médio</div><div class="hist-card-value">' + fmtS(ticketMed) + '</div></div>';
+
+  // Gráfico
+  var chartWrap = document.getElementById('hist-chart-wrap');
+  if (filtrados.length > 1) {
+    chartWrap.style.display = 'block';
+    var ctxEl = document.getElementById('hist-chart');
+    if (window._histChart) { window._histChart.destroy(); }
+    var reversed = filtrados.slice().reverse();
+    window._histChart = new Chart(ctxEl, {
+      type: 'bar',
+      data: {
+        labels: reversed.map(function(d){ return d.dataFmt; }),
+        datasets: [{
+          label: 'Faturamento',
+          data: reversed.map(function(d){ return d.faturamento; }),
+          backgroundColor: 'rgba(229,57,53,0.7)',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#888', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+          y: { ticks: { color: '#888', font: { size: 10 }, callback: function(v){ return 'R$'+v; } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        }
+      }
+    });
+  } else {
+    chartWrap.style.display = 'none';
+  }
+
+  // Lista de dias
+  var listaEl = document.getElementById('hist-lista');
+  if (!filtrados.length) {
+    listaEl.innerHTML = '<div class="hist-empty">Nenhum registro no período.<br>Feche o dia no Caixa para começar a registrar.</div>';
+    return;
+  }
+
+  listaEl.innerHTML = filtrados.map(function(d, i) {
+    var topHtml = d.topItens && d.topItens.length
+      ? d.topItens.map(function(it){ return '<div class="hist-top-item"><span>'+esc(it.nome)+'</span><span style="color:var(--gold)">'+it.qtd+'× · '+fmtS(it.total)+'</span></div>'; }).join('')
+      : '<div style="color:var(--muted);font-size:12px;padding:4px 0">Sem dados de itens</div>';
+
+    return '<div class="hist-day">' +
+      '<div class="hist-day-head" onclick="toggleHistDay('+i+')">' +
+        '<div class="hist-day-data">' +
+          '<div class="hist-day-nome">' + esc(d.diaSemana) + ', ' + esc(d.dataFmt) + '</div>' +
+          '<div class="hist-day-sub">' + d.numPedidos + ' pedido(s) · Saldo: ' + fmtS(d.saldo) + '</div>' +
+        '</div>' +
+        '<div class="hist-day-fat">' + fmtS(d.faturamento) + '</div>' +
+        '<span style="color:var(--muted);margin-left:8px;font-size:16px" id="hist-arrow-'+i+'">›</span>' +
+      '</div>' +
+      '<div class="hist-day-body" id="hist-body-'+i+'">' +
+        '<div class="hist-day-row"><span style="color:var(--muted)">Faturamento</span><span style="color:var(--gold);font-weight:700">' + fmtS(d.faturamento) + '</span></div>' +
+        '<div class="hist-day-row"><span style="color:var(--muted)">Saídas</span><span style="color:var(--red)">' + fmtS(d.saidas) + '</span></div>' +
+        '<div class="hist-day-row"><span style="color:var(--muted)">Saldo</span><span style="color:' + (d.saldo>=0?'var(--green)':'var(--red)') + ';font-weight:700">' + fmtS(d.saldo) + '</span></div>' +
+        '<div class="hist-day-row"><span style="color:var(--muted)">Pedidos</span><span>' + d.numPedidos + '</span></div>' +
+        '<div class="hist-day-row" style="border:none"><span style="color:var(--muted)">Ticket médio</span><span>' + fmtS(d.ticketMedio) + '</span></div>' +
+        '<div style="margin-top:10px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Mais vendidos</div>' +
+        topHtml +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function toggleHistDay(i) {
+  var body  = document.getElementById('hist-body-'+i);
+  var arrow = document.getElementById('hist-arrow-'+i);
+  if (!body) return;
+  var open = body.classList.toggle('open');
+  if (arrow) arrow.style.transform = open ? 'rotate(90deg)' : '';
 }
 
 // ─── CARDÁPIO DIGITAL ────────────────────────────────────────────────────
