@@ -478,9 +478,9 @@ textarea { resize: none; min-height: 72px; }
 
 /* ARTES GALLERY */
 .artes-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   margin-bottom: 14px;
 }
 .arte-card {
@@ -489,21 +489,23 @@ textarea { resize: none; min-height: 72px; }
   overflow: hidden;
   background: var(--bg3);
   border: 1px solid var(--border);
+  width: 100%;
 }
 .arte-card img {
   width: 100%;
   height: auto;
   display: block;
   object-fit: contain;
+  border-radius: var(--radius);
 }
 .arte-actions {
   display: flex;
   gap: 6px;
   position: absolute;
-  top: 6px; right: 6px;
+  top: 8px; right: 8px;
 }
 .arte-del, .arte-dl {
-  width: 30px; height: 30px;
+  width: 32px; height: 32px;
   background: rgba(0,0,0,0.75);
   border: none;
   border-radius: 50%;
@@ -514,6 +516,7 @@ textarea { resize: none; min-height: 72px; }
   line-height: 1;
   text-decoration: none;
   flex-shrink: 0;
+  backdrop-filter: blur(4px);
 }
 .arte-add-card {
   border-radius: var(--radius);
