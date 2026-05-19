@@ -1003,22 +1003,21 @@ textarea { resize: none; min-height: 72px; }
   </div>
 
   <input type="file" id="artes-file-input" accept="image/*" multiple style="display:none" onchange="artesFromFiles(this)">
+  <input type="file" id="artes-import-input" accept=".json" style="display:none" onchange="artesImportar(this)">
   <button class="btn btn-gold" onclick="document.getElementById('artes-file-input').click()">+ Adicionar foto</button>
 
-  <!-- Sync Firebase -->
+  <!-- Salvar / Carregar -->
   <div class="section" style="margin-top:14px">
-    <div class="section-head"><span class="section-title" style="font-size:14px">☁️ Sincronização entre dispositivos</span></div>
+    <div class="section-head"><span class="section-title" style="font-size:14px">💾 Salvar e carregar fotos</span></div>
     <div class="section-body">
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">Cole aqui a URL do seu banco Firebase para as fotos aparecerem em todos os dispositivos.</p>
-      <label class="form-label">URL do Firebase</label>
-      <input class="form-input" id="fb-url" placeholder="https://seu-projeto-default-rtdb.firebaseio.com" style="font-size:12px">
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="btn btn-primary" style="flex:1" onclick="salvarFbUrl()">Salvar URL</button>
-        <button class="btn btn-ghost" style="flex:1" onclick="artesPull()">🔄 Sincronizar agora</button>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Salve todas as fotos num arquivo para não perder, e carregue quando quiser em qualquer dispositivo.</p>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-primary" style="flex:1" onclick="artesExportar()">⬇ Salvar fotos</button>
+        <button class="btn btn-ghost" style="flex:1" onclick="document.getElementById('artes-import-input').click()">⬆ Carregar fotos</button>
       </div>
-      <div id="fb-status" style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center"></div>
     </div>
   </div>
+
   <div style="height:8px"></div>
   <button class="btn btn-ghost" onclick="artesLimpar()" style="margin-top:0">Limpar todas as artes</button>
 </div>
@@ -1153,7 +1152,7 @@ function irPara(id, btn) {
   if (id==='cardapio')  renderCardapio();
   if (id==='estoque')   renderEstoque();
   if (id==='caixa')     renderCaixa();
-  if (id==='artes')     { renderArtes(); var fi=document.getElementById('fb-url'); if(fi) fi.value=getFbUrl(); }
+  if (id==='artes')     renderArtes();
 }
 
 function irSubtab(id, btn) {
@@ -1900,58 +1899,40 @@ function renderArtes() {
   grid.innerHTML = html;
 }
 
-// ─── FIREBASE SYNC ──────────────────────────────────────────────────────────
-var FB_KEY = 'gg_fb_url';
-
-function getFbUrl() {
-  return localStorage.getItem(FB_KEY) || '';
+// ─── ARTES EXPORTAR / IMPORTAR ──────────────────────────────────────────────
+function artesExportar() {
+  if (!estado.artes.length) { toast('Nenhuma foto para salvar.', 'err'); return; }
+  var json = JSON.stringify(estado.artes);
+  var blob = new Blob([json], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var data = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+  a.href = url;
+  a.download = 'garage-artes-' + data + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Fotos salvas no arquivo!', 'ok');
 }
 
-function salvarFbUrl() {
-  var url = document.getElementById('fb-url').value.trim().replace(/\/$/, '');
-  if (!url) { toast('Cole a URL do Firebase primeiro.', 'err'); return; }
-  localStorage.setItem(FB_KEY, url);
-  toast('URL salva!', 'ok');
-  artesPull();
-}
-
-function fbStatus(msg, cor) {
-  var el = document.getElementById('fb-status');
-  if (el) { el.textContent = msg; el.style.color = cor || 'var(--muted)'; }
-}
-
-function artesPush() {
-  var url = getFbUrl();
-  if (!url) return;
-  fbStatus('Salvando na nuvem…');
-  fetch(url + '/artes.json', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(estado.artes)
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(){ fbStatus('✅ Salvo na nuvem — ' + new Date().toLocaleTimeString(), 'var(--green)'); })
-  .catch(function(){ fbStatus('❌ Erro ao salvar. Verifique a URL.', 'var(--red)'); });
-}
-
-function artesPull() {
-  var url = getFbUrl();
-  if (!url) { toast('Configure a URL do Firebase primeiro.', 'err'); return; }
-  fbStatus('Buscando fotos…');
-  fetch(url + '/artes.json')
-  .then(function(r){ return r.json(); })
-  .then(function(data) {
-    if (data && Array.isArray(data) && data.length) {
+function artesImportar(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      if (!Array.isArray(data)) throw new Error();
+      if (!confirm('Isso vai substituir as ' + estado.artes.length + ' fotos atuais por ' + data.length + ' do arquivo. Continuar?')) return;
       estado.artes = data;
       salvar();
       renderArtes();
-      fbStatus('✅ Sincronizado — ' + data.length + ' foto(s)', 'var(--green)');
-      toast('Fotos sincronizadas!', 'ok');
-    } else {
-      fbStatus('Nenhuma foto na nuvem ainda.', 'var(--muted)');
+      toast(data.length + ' foto(s) carregadas!', 'ok');
+    } catch(err) {
+      toast('Arquivo inválido.', 'err');
     }
-  })
-  .catch(function(){ fbStatus('❌ Erro ao buscar. Verifique a URL.', 'var(--red)'); });
+  };
+  reader.readAsText(file);
+  input.value = '';
 }
 
 function artesFromFiles(input) {
@@ -1966,7 +1947,6 @@ function artesFromFiles(input) {
       if (done === files.length) {
         salvar();
         renderArtes();
-        artesPush();
         toast('Foto' + (files.length > 1 ? 's adicionadas' : ' adicionada') + '!', 'ok');
       }
     };
@@ -1979,7 +1959,6 @@ function arteDel(idx) {
   estado.artes.splice(idx, 1);
   salvar();
   renderArtes();
-  artesPush();
   toast('Foto removida.', 'warn');
 }
 
